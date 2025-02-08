@@ -1,5 +1,5 @@
 
-# Chrome browser extension to download results from racenet.
+# Chrome browser extension to download results from racenet
 
 ## How to install
 
