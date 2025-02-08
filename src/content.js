@@ -81,12 +81,12 @@ if (window.location.href.startsWith("https://racenet.com/ea_sports_wrc/")) {
 
                 if (cells.length ===8) {
                     const pos      = cells[0].querySelector("p").innerText.trim().split('.')[0];
-                    const name     = cells[1].querySelector("p").innerText.trim();
+                    const name     = cells[1].querySelector("p").innerText.trim().replace(/\*$/, '');
                     const carModel = cells[2].querySelector("p").innerText.trim();
                     const penalty  = cells[4].querySelector("p").innerText.trim();
                     const time     = cells[5].querySelector("p").innerText.trim();
                     const timeDiff = cells[6].querySelector("p").innerText.trim();
-        
+
                     i = i+1;
                     const posInt = parseInt(pos);
                     // console.log('i=' + i + ', lastpos=' + lastpos + ', posInt=' + posInt);
