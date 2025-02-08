@@ -103,7 +103,7 @@ if (window.location.href.startsWith("https://racenet.com/ea_sports_wrc/")) {
             })
 
             const container = table.parentNode.parentNode;
-            const footer = container.children[2];
+            const footer = ( container.children.length == 5 ? container.children[4] : container.children[2] );
             if (footer.children.length == 3) { // means we have buttons
                 const btn = footer.children[1].children[0].children[1];
                 if (btn.style.opacity == 1) {
