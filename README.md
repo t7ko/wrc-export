@@ -1,7 +1,7 @@
 
-Chrome browser extension to download results from racenet.
+# Chrome browser extension to download results from racenet.
 
-How to install:
+## How to install
 
 * Download content of `src/` folder and place it somewhere on your hard drive.
 * Open `chrome://extensions/`
@@ -15,7 +15,7 @@ How to install:
   manifest.json file) and click "Select Folder" (or similar wording depending
   on your operating system).
 
-How to use:
+## How to use
 
 * Open the club page you want to download.
 * Make sure you stay on the first page (don't run the extension when you not
