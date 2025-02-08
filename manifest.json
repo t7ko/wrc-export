@@ -1,0 +1,15 @@
+{
+    "manifest_version": 3,
+    "name": "WRC Export",
+    "version": "1.0",
+    "description": "Собирает данные из таблицы на сайте и сохраняет их в CSV.",
+    "permissions": ["scripting", "activeTab"],
+    "host_permissions": ["https://racenet.com/ea_sports_wrc/*"],
+    "background": {
+      "service_worker": "background.js"
+    },
+   "action": {
+    "default_popup": "popup.html",
+    "default_icon": "icon.png"
+    }
+  }
