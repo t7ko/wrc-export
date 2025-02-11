@@ -96,8 +96,9 @@ if (window.location.href.startsWith("https://racenet.com/ea_sports_wrc/")) {
                         lastpos = posInt;
                     }
                 } else {
-                    alert("Размер окна недостаточен для отображения всех данных в таблице");
-                    return;
+                    if (index == 1) {
+                        alert("Размер окна недостаточен для отображения всех данных в таблице");
+                    }
                 }
 
             })
