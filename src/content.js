@@ -1,53 +1,25 @@
-function current_stage() {
-    let stages = document.getElementsByClassName('swiper-horizontal')[1].getElementsByClassName('swiper-slide')
-    let name = '';
-    for (let s of stages) {
-        let style = s.children[0].style['background-color'];
-        if (style == 'rgb(52, 113, 233)') {
-            name = s.innerText;
-            break;
-        }
-    }
-
-    if (!name) {
-        return 'stage'
-    }
-
-    let n = parseInt(name.slice(1));
-    if (isNaN(n)) {
-        return 'stage'
-    }
-
-    let prefix = 'stage_';
-    if (n < 10) {
-        prefix += '0';
-    }
-
-    return prefix + n.toString()
-}
-
-function save_as_csv(data) {
-    let csvContent = "Rank,DisplayName,Vehicle,Time,TimePenalty,DifferenceToFirst\n"
-
-    data.forEach((row) => {
-        csvContent += row.join(",") + "\n"
-    })
-
-    const blob = new Blob([csvContent], {type: "text/csv;charset=utf-8;"})
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = current_stage() + ".csv"
-    a.click()
-    URL.revokeObjectURL(url)
-
-    console.log(a.download, data.length)
-}
-
 if (window.location.href.startsWith("https://racenet.com/ea_sports_wrc/")) {
     function exportTableToCSV() {
         const data = [];
         let wait_counter = 0;
+
+        function processData() {
+            // console.log('processData()');
+
+            let csvContent = "Rank,DisplayName,Vehicle,Time,TimePenalty,DifferenceToFirst\n"
+
+            data.forEach((row) => {
+                csvContent += row.join(",") + "\n"
+            })
+
+            const blob = new Blob([csvContent], {type: "text/csv;charset=utf-16;"})
+            const url = URL.createObjectURL(blob)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = "table_data.csv"
+            a.click()
+            URL.revokeObjectURL(url)
+        }
 
         function waitForTable() {
             // console.log('waitForTable()');
@@ -143,8 +115,7 @@ if (window.location.href.startsWith("https://racenet.com/ea_sports_wrc/")) {
                 }
             }
 
-            console.log(current_stage(), data.length);
-            save_as_csv(data);
+            processData();
         }
 
         processOnePage();
