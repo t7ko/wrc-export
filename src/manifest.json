@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "WRC Export",
-    "version": "1.2",
+    "version": "1.3",
     "description": "Собирает данные из таблицы на сайте и сохраняет их в CSV или json",
     "permissions": ["scripting", "activeTab"],
     "host_permissions": ["https://racenet.com/ea_sports_wrc/*"],
