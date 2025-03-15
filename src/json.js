@@ -108,6 +108,26 @@ if (window.location.href.startsWith("https://racenet.com/ea_sports_wrc/")) {
                 parseTable(stage_id+1);
             }, 1000)
             return
+        } else {
+            // download totals
+            let stage_btn = document.evaluate("//*[text()='Stage' and contains(@class,'MuiTypography-root')]",
+                document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            let overall_btn = document.evaluate("//*[text()='Overall' and contains(@class,'MuiTypography-root')]",
+                document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            if (overall_btn.parentNode.style.backgroundColor == "transparent") {
+                if (stage_btn.parentNode.style.backgroundColor != "transparent") {
+                    overall_btn.click();
+                    data.stages.push({
+                        name: 'overall',
+                        results: [],
+                    })
+                    setTimeout(function(){
+                        parseTable(stage_id+1);
+                    }, 1000);
+                    return;
+                }
+                alert("Racenet поменял структуру страницы, скрипт требуется обновить. Overall не будет включён в экспорт.")
+            }
         }
 
         save_as_json(data);
