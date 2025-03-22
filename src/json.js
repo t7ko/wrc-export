@@ -74,13 +74,17 @@ if (window.location.href.startsWith("https://racenet.com/ea_sports_wrc/")) {
                 return
             }
 
-            const cells = row.querySelectorAll("td");
-            if (cells.length === 8) {
-                let d = parseRow(row);
-                data.stages[stage_id].results.push(d);
-            } else {
-                if (index == 1) {
-                    alert("Размер окна недостаточен для отображения всех данных в таблице");
+            let go_to_position_btn = document.evaluate(".//button[text()='Go To Position']",
+                row, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+            if (go_to_position_btn == null) {
+                const cells = row.querySelectorAll("td");
+                if (cells.length === 8) {
+                    let d = parseRow(row);
+                    data.stages[stage_id].results.push(d);
+                } else {
+                    if (index == 1) {
+                        alert("Размер окна недостаточен для отображения всех данных в таблице");
+                    }
                 }
             }
         })
@@ -135,7 +139,7 @@ if (window.location.href.startsWith("https://racenet.com/ea_sports_wrc/")) {
 
     console.log(current_stage());
     parseTable(0);
-    
+
 } else {
     console.error("Расширение работает только на сайте https://racenet.com/ea_sports_wrc/")
 }
