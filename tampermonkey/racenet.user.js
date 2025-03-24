@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         EA WRC Racenet Data Export
 // @namespace    http://tampermonkey.net/
-// @version      1.4
+// @version      1.5
 // @description  Downloads results data from Racenet EA WRC Championship.
 // @author       Ivan Tishchenko, Yandulov Andrey, Zatenatskiy Denis
 // @match        https://racenet.com/ea_sports_wrc/*
@@ -10,6 +10,28 @@
 
 (function() {
     'use strict';
+
+    function parseTimeToSeconds(timeString) {
+        // Regular expression to match [HH:]MM:SS.ddd format
+        const timeRegex = /^(?:(\d+):)?(\d{1,2}):(\d{1,2})\.(\d{3})$/;
+
+        const match = timeString.match(timeRegex);
+
+        if (match) {
+            const hours = match[1] ? parseInt(match[1], 10) : 0; // Hours are optional
+            const minutes = parseInt(match[2], 10);
+            const seconds = parseInt(match[3], 10);
+            const milliseconds = parseInt(match[4], 10);
+
+            // Calculate total seconds as a float
+            const totalSeconds = hours * 3600 + minutes * 60 + seconds + milliseconds / 1000;
+
+            return totalSeconds;
+        } else {
+            // return NaN;
+            throw new Error("Invalid time format");
+        }
+    }
 
     function current_stage() {
         let stages = document.getElementsByClassName('swiper-horizontal')[1].getElementsByClassName('swiper-slide')
@@ -62,7 +84,7 @@
         }
     }
 
-    function downloadJson() {
+    function downloadJson(is_extended) {
 
         const data = {
             type: 'wrc_exporter',
@@ -74,14 +96,38 @@
         let stages = document.getElementsByClassName('swiper-horizontal')[1].getElementsByClassName('swiper-slide');
         let limit = stages.length;
 
-        function parseTable(stage_id) {
-            // console.log('parseTable', stage_id);
+        function parseTable(stage_id, is_totals) {
             if (!data.stages[stage_id].name) {
                 data.stages[stage_id].name = current_stage();
             }
 
             const table = document.querySelector("table");
             const rows = table.querySelectorAll("tr");
+
+            let len = 0;
+            if (is_extended) {
+                if (!is_totals) {
+                    // find stage length on the page
+                    const lengthP = document.evaluate('//p[text()="Length:"]',
+                            document, null, XPathResult.FIRST_ORDERED_NODE_TYPE,
+                            null).singleNodeValue.nextElementSibling.nextElementSibling;
+                    len = lengthP.innerHTML.trim().split('\n')[0].trim();
+                    if (!len.endsWith('km')) {
+                        alert("Racenet поменял структуру страницы, скрипт требуется обновить. Длина допов и скорость не будет включена в экспорт.")
+                        len = 0;
+                    } else {
+                        len = len.slice(0, -2).trim();
+                        len = parseFloat(len);
+                        data.stages[stage_id].length = len;
+                    }
+                } else {
+                    // calculate total length sum over all stages
+                    for (let i = 0; i < data.stages.length - 1; i++) {
+                        len += data.stages[i].length;
+                    }
+                    data.stages[stage_id].length = len;
+                }
+            }
 
             rows.forEach((row, index) => {
                 if (index % 2 === 0) {
@@ -94,6 +140,9 @@
                     const cells = row.querySelectorAll("td");
                     if (cells.length === 8) {
                         let d = parseRow(row);
+                        if (is_extended) {
+                            d.speed = Math.round(10 * len / (parseTimeToSeconds(d.time)/3600.0)) / 10.0;
+                        }
                         data.stages[stage_id].results.push(d);
                     } else {
                         if (index == 1) {
@@ -110,7 +159,7 @@
                 if (btn.style.opacity == 1) {
                     btn.click(); // Go to next page
                     setTimeout(function(){
-                        parseTable(stage_id)
+                        parseTable(stage_id, is_totals)
                     }, 1000);
                     return;
                 } 
@@ -123,7 +172,7 @@
                     results: [],
                 })
                 setTimeout(function(){
-                    parseTable(stage_id+1);
+                    parseTable(stage_id+1, false);
                 }, 1000)
                 return
             } else {
@@ -140,7 +189,7 @@
                             results: [],
                         })
                         setTimeout(function(){
-                            parseTable(stage_id+1);
+                            parseTable(stage_id+1, true);
                         }, 1000);
                         return;
                     }
@@ -152,7 +201,7 @@
         }
 
         console.log(current_stage());
-        parseTable(0);
+        parseTable(0, false);
     }
 
     ///////////////////////////////////////////////////////////////////////////
@@ -180,14 +229,14 @@
     button1.textContent = 'Download JSON';
     button1.style.marginRight = '10px';
     button1.addEventListener('click', () => {
-        downloadJson();
+        downloadJson(false);
     });
 
     // Create the second button
     const button2 = document.createElement('button');
-    button2.textContent = 'Button 2';
+    button2.textContent = 'Extended JSON';
     button2.addEventListener('click', () => {
-        alert('Button 2 clicked!');
+        downloadJson(true);
     });
 
     // Create the unminimize button
