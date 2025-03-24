@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         EA WRC Racenet Data Export
 // @namespace    http://tampermonkey.net/
-// @version      1.5
+// @version      1.6
 // @description  Downloads results data from Racenet EA WRC Championship.
 // @author       Ivan Tishchenko, Yandulov Andrey, Zatenatskiy Denis
 // @match        https://racenet.com/ea_sports_wrc/*
@@ -71,6 +71,23 @@
         URL.revokeObjectURL(url)
     }
 
+    function save_as_csv(stage_data) {
+        let csvContent = "Rank,DisplayName,Vehicle,Time,TimePenalty,DifferenceToFirst\n";
+
+        stage_data.forEach((row) => {
+            csvContent += [row.position, row.name, row.car, row.time,
+                           row.penalty, row.timeDiff].join(",") + "\n"
+        });
+
+        const blob = new Blob([csvContent], {type: "text/csv;charset=utf-16;"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'stage.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
     function parseRow(row) {
         const cells = row.querySelectorAll("td");
 
@@ -84,7 +101,15 @@
         }
     }
 
-    function downloadJson(is_extended) {
+    function downloadData(format, is_extended) {
+
+        if (format != 'round_json' && format != 'stage_csv') {
+            throw new Error("Invalid parameters");
+        }
+
+        if (format == 'stage_csv' && is_extended) {
+            throw new Error("Invalid parameters");
+        }
 
         const data = {
             type: 'wrc_exporter',
@@ -166,15 +191,24 @@
             }
 
             if (stage_id+1 < limit) {
-                stages[stage_id+1].click() // Go to next stage
-                data.stages.push({
-                    name: '',
-                    results: [],
-                })
-                setTimeout(function(){
-                    parseTable(stage_id+1, false);
-                }, 1000)
-                return
+                if (format == 'round_json') {
+                    // Go to next stage
+                    stages[stage_id+1].click()
+                    data.stages.push({
+                        name: '',
+                        results: [],
+                    })
+                    setTimeout(function(){
+                        parseTable(stage_id+1, false);
+                    }, 1000)
+                    return
+                } else if (format == 'stage_csv') {
+                    // just dump the current data as csv
+                    save_as_csv(data.stages[0].results);
+                    return;
+                } else {
+                    throw new Error("Invalid parameters");
+                }
             } else {
                 // download totals
                 let stage_btn = document.evaluate("//*[text()='Stage' and contains(@class,'MuiTypography-root')]",
@@ -224,20 +258,29 @@
     const buttonsContainer = document.createElement('div');
     buttonsContainer.style.display = 'none'; // Initially hidden
 
-    // Create the first button
     const button1 = document.createElement('button');
-    button1.textContent = 'Download JSON';
+    button1.textContent = 'Basic JSON of all Stages';
     button1.style.marginRight = '10px';
     button1.addEventListener('click', () => {
-        downloadJson(false);
+        downloadData('round_json', false);
     });
 
-    // Create the second button
     const button2 = document.createElement('button');
-    button2.textContent = 'Extended JSON';
+    button2.textContent = 'Extended JSON of all Stages';
+    button2.style.marginRight = '10px';
     button2.addEventListener('click', () => {
-        downloadJson(true);
+        downloadData('round_json', true);
     });
+
+    const button3 = document.createElement('button');
+    button3.textContent = 'Selected Stage CSV';
+    button3.style.marginRight = '10px';
+    button3.addEventListener('click', () => {
+        downloadData('stage_csv', false);
+    });
+
+    const button_hide = document.createElement('button');
+    button_hide.textContent = 'Hide';
 
     // Create the unminimize button
     const unminimizeButton = document.createElement('button');
@@ -252,6 +295,8 @@
     // Append buttons to the container
     buttonsContainer.appendChild(button1);
     buttonsContainer.appendChild(button2);
+    buttonsContainer.appendChild(button3);
+    buttonsContainer.appendChild(button_hide);
 
     // Append the container and unminimize button to the panel
     panel.appendChild(buttonsContainer);
@@ -265,14 +310,17 @@
     panel.style.height = '20px';
 
     // Add minimize functionality
-    panel.addEventListener('click', (event) => {
+    function hide_panel(event) {
         if (event.target !== unminimizeButton && buttonsContainer.style.display !== 'none') {
             panel.style.width = '50px'; // Minimize width
             panel.style.height = '20px'; // Minimize height
             buttonsContainer.style.display = 'none';
             unminimizeButton.style.display = 'block';
         }
-    });
+    }
+
+    panel.addEventListener('click', hide_panel);
+    button_hide.addEventListener('click', hide_panel);
 
     // Add some styling using GM_addStyle
     GM_addStyle(`
