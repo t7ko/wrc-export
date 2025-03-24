@@ -1,7 +1,8 @@
 
-# Chrome browser extension to download results from racenet
+# Browser extension to download results from racenet
 
-## How to install
+
+## How to install in Chrome
 
 * Download content of `src/` folder and place it somewhere on your hard drive.
 * Open `chrome://extensions/`
@@ -23,3 +24,10 @@
 * Activate the extension: click 'extensions' icon on top right, select `WRC Export`.
    * You may want to "pin" this extension for faster access.
 * Click `Export` button.  It will download csv file to your `Downloads` folder.
+
+
+## How to install in Tampermonkey (Firefox, Chrome, and others)
+
+* Install Tampermonkey
+* Open this url:
+  https://github.com/t7ko/wrc-export/raw/refs/heads/main/tampermonkey/racenet.user.js
