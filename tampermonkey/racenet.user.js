@@ -11,6 +11,9 @@
 (function() {
     'use strict';
 
+    function roundToOneDecimal(num) {
+        return Math.round(10 * num) / 10.0;
+    }
     function parseTimeToSeconds(timeString) {
         // Regular expression to match [HH:]MM:SS.ddd format
         const timeRegex = /^(?:(\d+):)?(\d{1,2}):(\d{1,2})\.(\d{3})$/;
@@ -171,7 +174,7 @@
                     for (let i = 0; i < data.stages.length - 1; i++) {
                         len += data.stages[i].length;
                     }
-                    data.stages[stage_id].length = len;
+                    data.stages[stage_id].length = roundToOneDecimal(len);
                 }
             }
 
@@ -187,7 +190,7 @@
                     if (cells.length === 8) {
                         let d = parseRow(row);
                         if (is_extended) {
-                            d.speed = Math.round(10 * len / (parseTimeToSeconds(d.time)/3600.0)) / 10.0;
+                            d.speed = roundToOneDecimal(len / (parseTimeToSeconds(d.time)/3600.0));
                         }
                         data.stages[stage_id].results.push(d);
                     } else {
