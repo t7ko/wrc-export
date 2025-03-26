@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         EA WRC Racenet Data Export
 // @namespace    http://tampermonkey.net/
-// @version      1.6
+// @version      2.0
 // @description  Downloads results data from Racenet EA WRC Championship.
 // @author       Ivan Tishchenko, Yandulov Andrey, Zatenatskiy Denis
 // @match        https://racenet.com/ea_sports_wrc/*
@@ -71,7 +71,7 @@
         URL.revokeObjectURL(url)
     }
 
-    function save_as_csv(stage_data) {
+    function save_stage_as_csv(stage_data) {
         let csvContent = "Rank,DisplayName,Vehicle,Time,TimePenalty,DifferenceToFirst\n";
 
         stage_data.forEach((row) => {
@@ -84,6 +84,27 @@
         const a = document.createElement('a');
         a.href = url;
         a.download = 'stage.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+
+    function save_round_as_csv(data) {
+        let csvContent = "Stage,Rank,DisplayName,Vehicle,Time,TimePenalty,DifferenceToFirst,Distance,Velocity\n";
+
+        data.stages.forEach((stage) => {
+            stage.results.forEach((row) => {
+                csvContent += [stage.name,row.position, row.name, row.car,
+                               row.time, row.penalty, row.timeDiff,
+                               stage.length, row.speed
+                               ].join(",") + "\n"
+            })
+        });
+
+        const blob = new Blob([csvContent], {type: "text/csv;charset=utf-16;"});
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'round.csv';
         a.click();
         URL.revokeObjectURL(url);
     }
@@ -103,7 +124,7 @@
 
     function downloadData(format, is_extended) {
 
-        if (format != 'round_json' && format != 'stage_csv') {
+        if (format != 'round_json' && format != 'stage_csv' && format != 'round_csv') {
             throw new Error("Invalid parameters");
         }
 
@@ -191,7 +212,7 @@
             }
 
             if (stage_id+1 < limit) {
-                if (format == 'round_json') {
+                if (format == 'round_json' || format == 'round_csv') {
                     // Go to next stage
                     stages[stage_id+1].click()
                     data.stages.push({
@@ -204,7 +225,7 @@
                     return
                 } else if (format == 'stage_csv') {
                     // just dump the current data as csv
-                    save_as_csv(data.stages[0].results);
+                    save_stage_as_csv(data.stages[0].results);
                     return;
                 } else {
                     throw new Error("Invalid parameters");
@@ -231,7 +252,13 @@
                 }
             }
 
-            save_as_json(data);
+            if (format == 'round_json') {
+                save_as_json(data);
+            } else if (format == 'round_csv') {
+                save_round_as_csv(data);
+            } else {
+                throw new Error("Invalid parameters");
+            }
         }
 
         console.log(current_stage());
@@ -279,6 +306,13 @@
         downloadData('stage_csv', false);
     });
 
+    const button4 = document.createElement('button');
+    button4.textContent = 'All Stages CSV';
+    button4.style.marginRight = '10px';
+    button4.addEventListener('click', () => {
+        downloadData('round_csv', true);
+    });
+
     const button_hide = document.createElement('button');
     button_hide.textContent = 'Hide';
 
@@ -296,6 +330,7 @@
     buttonsContainer.appendChild(button1);
     buttonsContainer.appendChild(button2);
     buttonsContainer.appendChild(button3);
+    buttonsContainer.appendChild(button4);
     buttonsContainer.appendChild(button_hide);
 
     // Append the container and unminimize button to the panel
