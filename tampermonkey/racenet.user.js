@@ -89,7 +89,7 @@
     }
 
     function save_round_as_csv(data) {
-        let csvContent = "Stage,Rank,DisplayName,Vehicle,Time,TimePenalty,DifferenceToFirst,Distance,Velocity\n";
+        let csvContent = "Stage,Rank,DisplayName,Vehicle,Time,TimePenalty,DifferenceToFirst,Distance,Speed\n";
 
         data.stages.forEach((stage) => {
             stage.results.forEach((row) => {
