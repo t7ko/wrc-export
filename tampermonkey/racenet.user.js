@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         EA WRC Racenet Data Export
 // @namespace    http://tampermonkey.net/
-// @version      2.0
+// @version      2.1
 // @description  Downloads results data from Racenet EA WRC Championship.
 // @author       Ivan Tishchenko, Yandulov Andrey, Zatenatskiy Denis
 // @match        https://racenet.com/ea_sports_wrc/*
@@ -192,7 +192,10 @@
                         data.stages[stage_id].results.push(d);
                     } else {
                         if (index == 1) {
-                            alert("Размер окна недостаточен для отображения всех данных в таблице");
+                            if (!parseTable.screenSizeWarningShownOnce) {
+                                alert("Размер окна недостаточен для отображения всех данных в таблице");
+                                parseTable.screenSizeWarningShownOnce = true;
+                            }
                         }
                     }
                 }
