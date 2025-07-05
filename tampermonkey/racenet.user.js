@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         EA WRC Racenet Data Export
 // @namespace    http://tampermonkey.net/
-// @version      2.1
+// @version      2.2
 // @description  Downloads results data from Racenet EA WRC Championship.
 // @author       Ivan Tishchenko, Yandulov Andrey, Zatenatskiy Denis
 // @match        https://racenet.com/ea_sports_wrc/*
@@ -14,6 +14,7 @@
     function roundToOneDecimal(num) {
         return Math.round(10 * num) / 10.0;
     }
+
     function parseTimeToSeconds(timeString) {
         // Regular expression to match [HH:]MM:SS.ddd format
         const timeRegex = /^(?:(\d+):)?(\d{1,2}):(\d{1,2})\.(\d{3})$/;
@@ -125,13 +126,9 @@
         }
     }
 
-    function downloadData(format, is_extended) {
+    function downloadData(format) {
 
         if (format != 'round_json' && format != 'stage_csv' && format != 'round_csv') {
-            throw new Error("Invalid parameters");
-        }
-
-        if (format == 'stage_csv' && is_extended) {
             throw new Error("Invalid parameters");
         }
 
@@ -154,28 +151,26 @@
             const rows = table.querySelectorAll("tr");
 
             let len = 0;
-            if (is_extended) {
-                if (!is_totals) {
-                    // find stage length on the page
-                    const lengthP = document.evaluate('//p[text()="Length:"]',
-                            document, null, XPathResult.FIRST_ORDERED_NODE_TYPE,
-                            null).singleNodeValue.nextElementSibling.nextElementSibling;
-                    len = lengthP.innerHTML.trim().split('\n')[0].trim();
-                    if (!len.endsWith('km')) {
-                        alert("Racenet поменял структуру страницы, скрипт требуется обновить. Длина допов и скорость не будет включена в экспорт.")
-                        len = 0;
-                    } else {
-                        len = len.slice(0, -2).trim();
-                        len = parseFloat(len);
-                        data.stages[stage_id].length = len;
-                    }
+            if (!is_totals) {
+                // find stage length on the page
+                const lengthP = document.evaluate('//p[text()="Length:"]',
+                        document, null, XPathResult.FIRST_ORDERED_NODE_TYPE,
+                        null).singleNodeValue.nextElementSibling.nextElementSibling;
+                len = lengthP.innerHTML.trim().split('\n')[0].trim();
+                if (!len.endsWith('km')) {
+                    alert("Racenet поменял структуру страницы, скрипт требуется обновить. Длина допов и скорость не будет включена в экспорт.")
+                    len = 0;
                 } else {
-                    // calculate total length sum over all stages
-                    for (let i = 0; i < data.stages.length - 1; i++) {
-                        len += data.stages[i].length;
-                    }
-                    data.stages[stage_id].length = roundToOneDecimal(len);
+                    len = len.slice(0, -2).trim();
+                    len = parseFloat(len);
+                    data.stages[stage_id].length = len;
                 }
+            } else {
+                // calculate total length sum over all stages
+                for (let i = 0; i < data.stages.length - 1; i++) {
+                    len += data.stages[i].length;
+                }
+                data.stages[stage_id].length = roundToOneDecimal(len);
             }
 
             rows.forEach((row, index) => {
@@ -189,9 +184,7 @@
                     const cells = row.querySelectorAll("td");
                     if (cells.length === 8) {
                         let d = parseRow(row);
-                        if (is_extended) {
-                            d.speed = roundToOneDecimal(len / (parseTimeToSeconds(d.time)/3600.0));
-                        }
+                        d.speed = roundToOneDecimal(len / (parseTimeToSeconds(d.time)/3600.0));
                         data.stages[stage_id].results.push(d);
                     } else {
                         if (index == 1) {
@@ -214,7 +207,7 @@
                         parseTable(stage_id, is_totals)
                     }, 1000);
                     return;
-                } 
+                }
             }
 
             if (stage_id+1 < limit) {
@@ -292,31 +285,31 @@
     buttonsContainer.style.display = 'none'; // Initially hidden
 
     const button1 = document.createElement('button');
-    button1.textContent = 'Basic JSON of all Stages';
+    button1.textContent = 'JSON of all Stages';
     button1.style.marginRight = '10px';
     button1.addEventListener('click', () => {
-        downloadData('round_json', false);
+        downloadData('round_json');
     });
 
-    const button2 = document.createElement('button');
-    button2.textContent = 'Extended JSON of all Stages';
-    button2.style.marginRight = '10px';
-    button2.addEventListener('click', () => {
-        downloadData('round_json', true);
-    });
+//  const button2 = document.createElement('button');
+//  button2.textContent = 'Extended JSON of all Stages';
+//  button2.style.marginRight = '10px';
+//  button2.addEventListener('click', () => {
+//      downloadData('round_json');
+//  });
 
     const button3 = document.createElement('button');
-    button3.textContent = 'Selected Stage CSV';
+    button3.textContent = 'CSV of Current Stage';
     button3.style.marginRight = '10px';
     button3.addEventListener('click', () => {
-        downloadData('stage_csv', false);
+        downloadData('stage_csv');
     });
 
     const button4 = document.createElement('button');
-    button4.textContent = 'All Stages CSV';
+    button4.textContent = 'CSV of All Stages';
     button4.style.marginRight = '10px';
     button4.addEventListener('click', () => {
-        downloadData('round_csv', true);
+        downloadData('round_csv');
     });
 
     const button_hide = document.createElement('button');
@@ -334,7 +327,7 @@
 
     // Append buttons to the container
     buttonsContainer.appendChild(button1);
-    buttonsContainer.appendChild(button2);
+    //buttonsContainer.appendChild(button2);
     buttonsContainer.appendChild(button3);
     buttonsContainer.appendChild(button4);
     buttonsContainer.appendChild(button_hide);

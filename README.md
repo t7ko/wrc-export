@@ -18,13 +18,12 @@
    * If this is not the case, export will be incomplete or incorrect.
 * Activate the extension: click `DL` button in top right corner of the page,
   select the format you need:
-   * `Basic JSON of all Stages`: json with all visible columns; supported by
-     [Yoklmn](https://yoklmnracing.ru/championships/game/29) platform.
-   * `Extended JSON of all Stages`: same as Basic, but adds length of the stage,
-     and average speed of pilots.
-   * `Selected Stage CSV`: CSV of the currently visible table (current stage, or
-     current totals, whatever is selected).
-   * `All Stages CSV`: CSV of all stages, plus overall totals.  Includes
+   * `JSON of all Stages`: json with all stages; supported by
+     [Yoklmn](https://yoklmnracing.ru/championships/game/29) platform.  Adds
+     Length of each stage, and average speed of pilots.
+   * `CSV of Current Stage`: CSV of the currently visible table (current
+     stage, or current totals, whatever is selected).
+   * `CSV of All Stages`: CSV of all stages, plus overall totals.  Includes
      distance and average speed.
 
 
