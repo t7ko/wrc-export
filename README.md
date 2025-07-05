@@ -1,5 +1,5 @@
 
-# Browser extension to download results from racenet
+# Browser extension to download results or event summary from racenet
 
 ## How to install in Tampermonkey (Firefox, Chrome, and others)
 
@@ -21,6 +21,7 @@
    * `JSON of all Stages`: json with all stages; supported by
      [Yoklmn](https://yoklmnracing.ru/championships/game/29) platform.  Adds
      Length of each stage, and average speed of pilots.
+   * `Event Summary`: shows event summary in a pop-up dialog.
    * `CSV of Current Stage`: CSV of the currently visible table (current
      stage, or current totals, whatever is selected).
    * `CSV of All Stages`: CSV of all stages, plus overall totals.  Includes

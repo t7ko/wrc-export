@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         EA WRC Racenet Data Export
 // @namespace    http://tampermonkey.net/
-// @version      2.2
+// @version      3.0
 // @description  Downloads results data from Racenet EA WRC Championship.
 // @author       Ivan Tishchenko, Yandulov Andrey, Zatenatskiy Denis
 // @match        https://racenet.com/ea_sports_wrc/*
@@ -11,9 +11,50 @@
 (function() {
     'use strict';
 
+    function round(num) {
+        return Math.round(num);
+    }
+
     function roundToOneDecimal(num) {
         return Math.round(10 * num) / 10.0;
     }
+
+    function showLongText(text) {
+        const longText = text.replace(/\n/g, '<br>');
+
+        // Create modal window
+        const modal = document.createElement('div');
+        modal.style.position = 'fixed';
+        modal.style.top = '0';
+        modal.style.left = '0';
+        modal.style.width = '100vw';
+        modal.style.height = '100vh';
+        modal.style.background = 'rgba(0,0,0,0.4)';
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.zIndex = '9999';
+
+        // Container for the text
+        const box = document.createElement('div');
+        box.style.background = 'white';
+        box.style.padding = '20px';
+        box.style.borderRadius = '8px';
+        box.style.maxWidth = '90vw';
+        box.style.maxHeight = '80vh';
+        box.style.overflowY = 'auto';
+        box.innerHTML = `<div style="white-space:pre-line; font-family:monospace;">${longText}</div>
+            <button id="closeModalBtn" style="margin-top:20px;">Закрыть</button>`;
+
+        modal.appendChild(box);
+        document.body.appendChild(modal);
+
+        // Close button
+        document.getElementById('closeModalBtn').onclick = function() {
+            modal.remove();
+        };
+    }
+
 
     function parseTimeToSeconds(timeString) {
         // Regular expression to match [HH:]MM:SS.ddd format
@@ -113,6 +154,44 @@
         URL.revokeObjectURL(url);
     }
 
+    function show_event_summary(data) {
+        let stagesText = "";
+        let stagesHTML = "<table> <thead> <tr> <th>SS</th> <th>Name</th> <th>Length</th> <th>Weather</th> <th>Time of Day</th> <th>Service area</th> </tr> </thead> <tbody> ";
+        // <tr> <td>Данные строки 1, ячейка 1</td> <td>Данные строки 1, ячейка 2</td> <td>Данные строки 1, ячейка 3</td> <td>Данные строки 1, ячейка 4</td> </tr> <tr> <td>Данные строки 2, ячейка 1</td> <td>Данные строки 2, ячейка 2</td> <td>Данные строки 2, ячейка 3</td> <td>Данные строки 2, ячейка 4</td> </tr> <tr> <td>Данные строки 3, ячейка 1</td> <td>Данные строки 3, ячейка 2</td> <td>Данные строки 3, ячейка 3</td> <td>Данные строки 3, ячейка 4</td> </tr> </tbody> </table>
+        let serviceMap = '';
+
+        let interimLen = 0;
+        data.stages.slice(0, -1).forEach((stage) => {
+            if (stage.serviceArea != 'None') {
+                if (interimLen != 0) {
+                    serviceMap += `${round(interimLen)}-`;
+                }
+                serviceMap += `${stage.serviceArea[0]}-`;
+                interimLen = 0;
+            }
+            interimLen += stage.length;
+            stagesText += `${stage.name}: ${stage.nameLabel}, ${stage.length}km, ${stage.weather}, ${stage.timeOfDay}`;
+            if (stage.serviceArea != 'None') {
+                stagesText += `, ${stage.serviceArea} service`;
+            }
+            stagesText += `\n`;
+            stagesHTML += `<tr> <td>${stage.name} </td> <td>/ ${stage.nameLabel}</td> <td> / ${stage.length}km</td> <td>/ ${stage.weather}</td> <td>/ ${stage.timeOfDay}</td> <td>/ ${ stage.serviceArea == 'None' ? '-' : stage.serviceArea }</tr> `;
+        });
+        serviceMap += `${round(interimLen)}`;
+
+        stagesHTML += " </tbody> </table>";
+
+        showLongText(`
+            Event summary:
+
+            ${data.stages.length - 1} stages, total length ${data.stages.at(-1).length}km.
+
+            Service Map: ${serviceMap}
+
+            ${stagesHTML}
+        `);
+    }
+
     function parseRow(row) {
         const cells = row.querySelectorAll("td");
 
@@ -128,7 +207,8 @@
 
     function downloadData(format) {
 
-        if (format != 'round_json' && format != 'stage_csv' && format != 'round_csv') {
+        if (   format != 'round_json' && format != 'stage_csv'
+            && format != 'round_csv'  && format != 'event_summary') {
             throw new Error("Invalid parameters");
         }
 
@@ -152,10 +232,12 @@
 
             let len = 0;
             if (!is_totals) {
+                // stage details
                 // find stage length on the page
-                const lengthP = document.evaluate('//p[text()="Length:"]',
+                const lengthLabel = document.evaluate('//p[text()="Length:"]',
                         document, null, XPathResult.FIRST_ORDERED_NODE_TYPE,
-                        null).singleNodeValue.nextElementSibling.nextElementSibling;
+                        null).singleNodeValue;
+                const lengthP = lengthLabel.nextElementSibling.nextElementSibling;
                 len = lengthP.innerHTML.trim().split('\n')[0].trim();
                 if (!len.endsWith('km')) {
                     alert("Racenet поменял структуру страницы, скрипт требуется обновить. Длина допов и скорость не будет включена в экспорт.")
@@ -165,6 +247,17 @@
                     len = parseFloat(len);
                     data.stages[stage_id].length = len;
                 }
+                const stageName = lengthLabel.parentNode.parentNode.previousElementSibling.previousElementSibling;
+                data.stages[stage_id].nameLabel = stageName.innerText.replace(/^\d+\s*-\s*/, '');
+
+                const weatherP = lengthP.parentNode.nextElementSibling.nextElementSibling.children[2];
+                data.stages[stage_id].weather = weatherP.innerText;
+
+                const timeOfDayP = weatherP.parentNode.nextElementSibling.nextElementSibling.children[2];
+                data.stages[stage_id].timeOfDay = timeOfDayP.innerText;
+
+                const serviceAreaP = timeOfDayP.parentNode.nextElementSibling.nextElementSibling.children[2];
+                data.stages[stage_id].serviceArea = serviceAreaP.innerText;
             } else {
                 // calculate total length sum over all stages
                 for (let i = 0; i < data.stages.length - 1; i++) {
@@ -173,29 +266,31 @@
                 data.stages[stage_id].length = roundToOneDecimal(len);
             }
 
-            rows.forEach((row, index) => {
-                if (index % 2 === 0) {
-                    return
-                }
+            if (format != 'event_summary') {
+                rows.forEach((row, index) => {
+                    if (index % 2 === 0) {
+                        return
+                    }
 
-                let go_to_position_btn = document.evaluate(".//button[text()='Go To Position']",
-                    row, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-                if (go_to_position_btn == null) {
-                    const cells = row.querySelectorAll("td");
-                    if (cells.length === 8) {
-                        let d = parseRow(row);
-                        d.speed = roundToOneDecimal(len / (parseTimeToSeconds(d.time)/3600.0));
-                        data.stages[stage_id].results.push(d);
-                    } else {
-                        if (index == 1) {
-                            if (!parseTable.screenSizeWarningShownOnce) {
-                                alert("Размер окна недостаточен для отображения всех данных в таблице");
-                                parseTable.screenSizeWarningShownOnce = true;
+                    let go_to_position_btn = document.evaluate(".//button[text()='Go To Position']",
+                        row, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+                    if (go_to_position_btn == null) {
+                        const cells = row.querySelectorAll("td");
+                        if (cells.length === 8) {
+                            let d = parseRow(row);
+                            d.speed = roundToOneDecimal(len / (parseTimeToSeconds(d.time)/3600.0));
+                            data.stages[stage_id].results.push(d);
+                        } else {
+                            if (index == 1) {
+                                if (!parseTable.screenSizeWarningShownOnce) {
+                                    alert("Размер окна недостаточен для отображения всех данных в таблице");
+                                    parseTable.screenSizeWarningShownOnce = true;
+                                }
                             }
                         }
                     }
-                }
-            })
+                });
+            }
 
             const container = table.parentNode.parentNode;
             const footer = ( container.children.length == 5 ? container.children[4] : container.children[2] );
@@ -211,7 +306,7 @@
             }
 
             if (stage_id+1 < limit) {
-                if (format == 'round_json' || format == 'round_csv') {
+                if (format == 'round_json' || format == 'round_csv' || format == 'event_summary') {
                     // Go to next stage
                     stages[stage_id+1].click()
                     data.stages.push({
@@ -255,6 +350,8 @@
                 save_as_json(data);
             } else if (format == 'round_csv') {
                 save_round_as_csv(data);
+            } else if (format == 'event_summary') {
+                show_event_summary(data);
             } else {
                 throw new Error("Invalid parameters");
             }
@@ -291,12 +388,12 @@
         downloadData('round_json');
     });
 
-//  const button2 = document.createElement('button');
-//  button2.textContent = 'Extended JSON of all Stages';
-//  button2.style.marginRight = '10px';
-//  button2.addEventListener('click', () => {
-//      downloadData('round_json');
-//  });
+    const button2 = document.createElement('button');
+    button2.textContent = 'Event Summary';
+    button2.style.marginRight = '10px';
+    button2.addEventListener('click', () => {
+        downloadData('event_summary');
+    });
 
     const button3 = document.createElement('button');
     button3.textContent = 'CSV of Current Stage';
@@ -327,7 +424,7 @@
 
     // Append buttons to the container
     buttonsContainer.appendChild(button1);
-    //buttonsContainer.appendChild(button2);
+    buttonsContainer.appendChild(button2);
     buttonsContainer.appendChild(button3);
     buttonsContainer.appendChild(button4);
     buttonsContainer.appendChild(button_hide);
