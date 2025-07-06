@@ -106,6 +106,41 @@
         return prefix + n.toString()
     }
 
+    function toggleStageOverall(what) {
+        if (what != "STAGE" && what != 'OVERALL') {
+            throw new Error("Invalid parameters");
+        }
+        let stage_btn = document.evaluate("//*[text()='Stage' and contains(@class,'MuiTypography-root')]",
+            document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+        let overall_btn = document.evaluate("//*[text()='Overall' and contains(@class,'MuiTypography-root')]",
+            document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
+
+        const isOverallTransparent = (overall_btn.parentNode.style.backgroundColor == "transparent");
+        const isStageTransparent   = (stage_btn  .parentNode.style.backgroundColor == "transparent");
+
+        if (isOverallTransparent == isStageTransparent) {
+            return "FAIL";
+        }
+
+        const curr = ( isStageTransparent ? "OVERALL" : "STAGE" );
+
+        if (what == "OVERALL") {
+            if (curr != "OVERALL") {
+                overall_btn.click();
+                return "DONE";
+            }
+            return "ALREADY";
+        }
+        if (what == "STAGE") {
+            if (curr != "STAGE") {
+                stage_btn.click();
+                return "DONE";
+            }
+            return "ALREADY";
+        }
+        return "FAIL";
+    }
+
     function save_as_json(data) {
         const blob = new Blob([JSON.stringify(data, null, 4)], {type: "application/json"})
         const url = URL.createObjectURL(blob)
@@ -205,6 +240,23 @@
         }
     }
 
+    function getResultsTableElement() {
+        return document.querySelector("table");
+    }
+
+    function getResultsTablePaginationButton(which) { // "PREV" or "NEXT"
+        if (which != "NEXT" && which != "PREV") {
+            throw new Error("Invalid parameters");
+        }
+        const n = ( which == "NEXT" ? 1 : 0 );
+        const container = getResultsTableElement().parentNode.parentNode;
+        const footer = ( container.children.length == 5 ? container.children[4] : container.children[2] );
+        if (footer.children.length == 3) { // means we have buttons
+            return footer.children[1].children[0].children[n];
+        }
+        return null;
+    }
+
     function downloadData(format) {
 
         if (   format != 'round_json' && format != 'stage_csv'
@@ -222,12 +274,59 @@
         let stages = document.getElementsByClassName('swiper-horizontal')[1].getElementsByClassName('swiper-slide');
         let limit = stages.length;
 
+        if (format != 'stage_csv') {
+            // go to first stage and from overall to per-stage display
+
+            // make sure we re on STAGE not OVERALL mode
+            const res1 = toggleStageOverall("STAGE");
+            if (res1 == "FAIL") {
+                alert("Racenet поменял структуру страницы, скрипт требуется обновить.");
+                return;
+            }
+            if (res1 == "DONE") {
+                setTimeout(function(){
+                    downloadData(format);
+                }, 1000);
+                return;
+            }
+
+            // make sure we're on first stage
+            const firstStageButtonBG = stages[0].children[0].style.backgroundColor;
+            if (firstStageButtonBG == "rgb(29, 32, 51)") {
+                // not yet selected -- click it
+                stages[0].click();
+                setTimeout(function(){
+                    downloadData(format);
+                }, 1000);
+                return;
+            } else if (firstStageButtonBG == "rgb(52, 113, 233)") {
+                // pass through -- already selected
+            } else {
+                alert("Racenet поменял структуру страницы, скрипт требуется обновить.");
+                return;
+            }
+        }
+
+        if (format != "event_summary") {
+            // make sure we're on first page in results table
+            const btn = getResultsTablePaginationButton("PREV");
+            if (btn) {
+                if (btn.style.opacity == 1) {
+                    btn.click(); // Go to previous page, till we hit first
+                    setTimeout(function(){
+                        downloadData(format);
+                    }, 1000);
+                    return;
+                }
+            }
+        }
+
         function parseTable(stage_id, is_totals) {
             if (!data.stages[stage_id].name) {
                 data.stages[stage_id].name = current_stage();
             }
 
-            const table = document.querySelector("table");
+            const table = getResultsTableElement();
             const rows = table.querySelectorAll("tr");
 
             let len = 0;
@@ -292,16 +391,17 @@
                 });
             }
 
-            const container = table.parentNode.parentNode;
-            const footer = ( container.children.length == 5 ? container.children[4] : container.children[2] );
-            if (footer.children.length == 3) { // means we have buttons
-                const btn = footer.children[1].children[0].children[1];
-                if (btn.style.opacity == 1) {
-                    btn.click(); // Go to next page
-                    setTimeout(function(){
-                        parseTable(stage_id, is_totals)
-                    }, 1000);
-                    return;
+            if (format != 'event_summary') {
+                // see if we have next page with results
+                const btn = getResultsTablePaginationButton("NEXT");
+                if (btn) { // means we have buttons
+                    if (btn.style.opacity == 1) {
+                        btn.click(); // Go to next page
+                        setTimeout(function(){
+                            parseTable(stage_id, is_totals)
+                        }, 1000);
+                        return;
+                    }
                 }
             }
 
@@ -326,23 +426,20 @@
                 }
             } else {
                 // download totals
-                let stage_btn = document.evaluate("//*[text()='Stage' and contains(@class,'MuiTypography-root')]",
-                    document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-                let overall_btn = document.evaluate("//*[text()='Overall' and contains(@class,'MuiTypography-root')]",
-                    document, null, XPathResult.FIRST_ORDERED_NODE_TYPE, null).singleNodeValue;
-                if (overall_btn.parentNode.style.backgroundColor == "transparent") {
-                    if (stage_btn.parentNode.style.backgroundColor != "transparent") {
-                        overall_btn.click();
-                        data.stages.push({
-                            name: 'overall',
-                            results: [],
-                        })
-                        setTimeout(function(){
-                            parseTable(stage_id+1, true);
-                        }, 1000);
-                        return;
-                    }
-                    alert("Racenet поменял структуру страницы, скрипт требуется обновить. Overall не будет включён в экспорт.")
+                const res = toggleStageOverall("OVERALL");
+                if (res == "DONE") {
+                    data.stages.push({
+                        name: 'overall',
+                        results: [],
+                    });
+                    setTimeout(function(){
+                        parseTable(stage_id+1, true);
+                    }, 1000);
+                    return;
+                } else if (res == "FAIL") {
+                    alert("Racenet поменял структуру страницы, скрипт требуется обновить. Overall не будет включён в экспорт.");
+                } else if (res == "ALREADY") {
+                    // pass through
                 }
             }
 

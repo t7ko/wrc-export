@@ -12,10 +12,6 @@
 ### How to use
 
 * Open the club page you want to download.
-* Make sure you are on the first page in results table. If you plan to do full
-  round export -- make sure you stay on the first stage, in `STAGE` mode (not
-  in `TOTALS`).
-   * If this is not the case, export will be incomplete or incorrect.
 * Activate the extension: click `DL` button in top right corner of the page,
   select the format you need:
    * `JSON of all Stages`: json with all stages; supported by
