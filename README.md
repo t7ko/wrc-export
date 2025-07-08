@@ -9,6 +9,15 @@
 * It will show Tampermonkey dialog for this script -- proceed to install.
 
 
+## How to update script to latest version
+
+Simply re-open the same URL:
+
+https://github.com/t7ko/wrc-export/raw/refs/heads/main/tampermonkey/racenet.user.js
+
+and confirm that you want to update, when asked.
+
+
 ### How to use
 
 * Open the club page you want to download.
