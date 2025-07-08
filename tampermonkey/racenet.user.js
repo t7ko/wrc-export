@@ -546,7 +546,11 @@
         unminimizeButton.style.display = 'none';
     });
 
+    const counterImg = document.createElement('img');
+    counterImg.src = "https://c.statcounter.com/13149531/0/2c5f5933/1/"
+
     // Append buttons to the container
+    buttonsContainer.appendChild(counterImg);
     buttonsContainer.appendChild(button1);
     buttonsContainer.appendChild(button2);
     buttonsContainer.appendChild(button3);
