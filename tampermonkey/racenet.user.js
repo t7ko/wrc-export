@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         EA WRC Racenet Data Export
 // @namespace    http://tampermonkey.net/
-// @version      3.0
+// @version      3.1
 // @description  Downloads results data from Racenet EA WRC Championship.
 // @author       Ivan Tishchenko, Yandulov Andrey, Zatenatskiy Denis
 // @match        https://racenet.com/ea_sports_wrc/*
@@ -219,9 +219,11 @@
         showLongText(`
             Event summary:
 
-            ${data.stages.length - 1} stages, total length ${data.stages.at(-1).length}km.
-
-            Service Map: ${serviceMap}
+            * Championship: ${data.champName}
+            * Location: ${data.locationName}
+            * When: ${data.dates}
+            * ${data.stages.length - 1} stages, total length ${data.stages.at(-1).length}km.
+            * Service Map: ${serviceMap}
 
             ${stagesHTML}
         `);
@@ -320,6 +322,31 @@
                 }
             }
         }
+
+        // get championship name
+        const champNameP = document.evaluate('//p[contains(@style, "font-size: 40px;")]',
+            document, null, XPathResult.FIRST_ORDERED_NODE_TYPE,
+            null).singleNodeValue;
+        if (!champNameP) {
+            alert("Racenet поменял структуру страницы, скрипт требуется обновить.");
+        }
+        data.champName = champNameP.innerText;
+
+        // get location name
+        const locationNameP = document.evaluate('//p[contains(@style, "font-size: 20px;") and contains(@style, "color: inherit;")]',
+            document, null, XPathResult.FIRST_ORDERED_NODE_TYPE,
+            null).singleNodeValue;
+        if (!locationNameP) {
+            alert("Racenet поменял структуру страницы, скрипт требуется обновить.");
+        }
+        data.locationName = locationNameP.innerText;
+
+        // get dates
+        const datesP = locationNameP.parentNode.children[2];
+        if (!datesP) {
+            alert("Racenet поменял структуру страницы, скрипт требуется обновить.");
+        }
+        data.dates = datesP.innerText.replace(/\s+/g, ' ').trim();
 
         function parseTable(stage_id, is_totals) {
             if (!data.stages[stage_id].name) {
