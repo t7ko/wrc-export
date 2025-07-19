@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         EA WRC Racenet Data Export
 // @namespace    http://tampermonkey.net/
-// @version      3.1
+// @version      3.2
 // @description  Downloads results data from Racenet EA WRC Championship.
 // @author       Ivan Tishchenko, Yandulov Andrey, Zatenatskiy Denis
 // @match        https://racenet.com/ea_sports_wrc/*
@@ -19,8 +19,8 @@
         return Math.round(10 * num) / 10.0;
     }
 
-    function showLongText(text) {
-        const longText = text.replace(/\n/g, '<br>');
+    function showLongText(text, replaceNewlinesWithBr = true) {
+        const longText = ( replaceNewlinesWithBr ? text.replace(/\n/g, '<br>') : text );
 
         // Create modal window
         const modal = document.createElement('div');
@@ -43,7 +43,8 @@
         box.style.maxWidth = '90vw';
         box.style.maxHeight = '80vh';
         box.style.overflowY = 'auto';
-        box.innerHTML = `<div style="white-space:pre-line; font-family:monospace;">${longText}</div>
+        // removed style: white-space:pre-line; 
+        box.innerHTML = `<div style="font-family:monospace;">${longText}</div>
             <button id="closeModalBtn" style="margin-top:20px;">Закрыть</button>`;
 
         modal.appendChild(box);
@@ -216,17 +217,27 @@
 
         stagesHTML += " </tbody> </table>";
 
+        // <div style="display: grid; grid-template-columns: max-content 1fr; gap: 10px;">
         showLongText(`
             Event summary:
 
-            * Championship: ${data.champName}
-            * Location: ${data.locationName}
-            * When: ${data.dates}
-            * ${data.stages.length - 1} stages, total length ${data.stages.at(-1).length}km.
-            * Service Map: ${serviceMap}
+            <br/>
+            <br/>
+
+            <table style="border-collapse: collapse;">
+              <tbody>
+              <tr> <td>* Championship:</td> <td>&nbsp;&nbsp;${data.champName}</td> </tr>
+              <tr> <td>* Location:</td>     <td>&nbsp;&nbsp;${data.locationName}</td> </tr>
+              <tr> <td>* When:</td>         <td>&nbsp;&nbsp;${data.dates}</td> </tr>
+              <tr> <td>* Scale:</td>        <td>&nbsp;&nbsp;${data.stages.length - 1} stages, total length ${data.stages.at(-1).length}km.</td> </tr>
+              <tr> <td>* Service Map:</td>  <td>&nbsp;&nbsp;${serviceMap}</td> </tr>
+              </tbody>
+            </table>
+
+            <br/>
 
             ${stagesHTML}
-        `);
+        `, false);
     }
 
     function parseRow(row) {
